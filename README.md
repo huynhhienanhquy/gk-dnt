@@ -160,14 +160,6 @@ Chạy Web Admin và Expo Go cùng lúc với cấu hình Firebase của bài gi
 
 5. Mở repository trên GitHub và xác nhận có cả `web-admin` và `mobile-app`. Sao chép link vào báo cáo.
 
-### Kịch bản quay video
+### Nộp báo cáo
 
-| Thời gian | Hình cần quay | Nội dung trình bày |
-| --- | --- | --- |
-| 0:00–0:20 | Web Admin và Expo Go | Giới thiệu hai ứng dụng dùng chung một Firestore |
-| 0:20–0:45 | Web Admin | Đăng nhập bằng tài khoản quản trị, sau đó mở danh sách |
-| 0:45–1:10 | Web và điện thoại | Thêm người dùng demo và mở mục vừa xuất hiện trên điện thoại |
-| 1:10–1:35 | Web và chi tiết mobile | Sửa họ tên trên web và giữ màn hình chi tiết đang mở để thấy cập nhật |
-| 1:35–2:00 | Hai ứng dụng | Xóa bản ghi thử, đối chiếu danh sách, rồi đăng xuất |
-
-Điền thông tin sinh viên và giảng viên trong báo cáo Word, bổ sung kết quả kiểm thử đã thực hiện và dán link GitHub cùng link video. Dùng dữ liệu hư cấu khi quay và tránh quay lúc nhập mật khẩu quản trị.
+Điền thông tin sinh viên và giảng viên trong báo cáo Word, bổ sung kết quả kiểm thử trên thiết bị thật và dán link GitHub sau khi đẩy mã nguồn.
