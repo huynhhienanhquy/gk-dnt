@@ -1,0 +1,20 @@
+[
+  {
+    "email": "an.nguyen@example.com",
+    "matkhau": "demo-001",
+    "hoten": "Nguyễn Minh An",
+    "hinhanh": "https://api.dicebear.com/9.x/initials/png?seed=Minh%20An"
+  },
+  {
+    "email": "chi.tran@example.com",
+    "matkhau": "demo-002",
+    "hoten": "Trần Bảo Chi",
+    "hinhanh": "https://api.dicebear.com/9.x/initials/png?seed=Bao%20Chi"
+  },
+  {
+    "email": "duy.le@example.com",
+    "matkhau": "demo-003",
+    "hoten": "Lê Quốc Duy",
+    "hinhanh": "https://api.dicebear.com/9.x/initials/png?seed=Quoc%20Duy"
+  }
+]

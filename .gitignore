@@ -1,0 +1,6 @@
+.env
+.env.*
+!.env.example
+firebase-debug.log*
+firestore-debug.log*
+/docs/bao-cao-giua-ky.docx

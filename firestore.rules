@@ -1,0 +1,33 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function validUser(data) {
+      let fields = ['email', 'matkhau', 'hoten', 'hinhanh'];
+      return data.keys().hasAll(fields) && data.keys().hasOnly(fields)
+        && data.email is string && data.email.size() <= 254
+        && data.email.matches('[^\\s@]+@[^\\s@]+\\.[^\\s@]+')
+        && data.matkhau is string && data.matkhau.size() <= 100
+        && data.matkhau.matches('.*\\S.*')
+        && data.hoten is string && data.hoten.size() <= 100
+        && data.hoten.matches('.*\\S.*')
+        && data.hinhanh is string && data.hinhanh.size() <= 2048
+        && data.hinhanh.matches('https://[^\\s/@?#]+([/?#][^\\s]*)?');
+    }
+
+    match /admins/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+    }
+
+    match /users/{id} {
+      allow read: if true;
+      allow create, update: if isAdmin() && validUser(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}
