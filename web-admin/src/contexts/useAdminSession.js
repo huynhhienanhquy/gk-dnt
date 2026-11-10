@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
-import { doc, getDocFromServer } from 'firebase/firestore'
+import { doc, onSnapshot } from 'firebase/firestore'
 import { auth, db } from '../firebase/client.js'
 
 export function useAdminSession() {
@@ -9,27 +9,38 @@ export function useAdminSession() {
   useEffect(() => {
     if (!auth || !db) return
 
-    let currentCheck = 0
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      const check = ++currentCheck
+    let stopGrant = () => {}
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      stopGrant()
       if (!user) {
         setSession({ status: 'signed-out', user: null })
         return
       }
 
       setSession({ status: 'checking', user })
-      try {
-        const grant = await getDocFromServer(doc(db, 'admins', user.uid))
-        if (check === currentCheck) {
+      const timeout = setTimeout(() => setSession({ status: 'error', user }), 10_000)
+      const unsubscribeGrant = onSnapshot(
+        doc(db, 'admins', user.uid),
+        { includeMetadataChanges: true },
+        (grant) => {
+          if (grant.metadata.fromCache) return
+          clearTimeout(timeout)
           setSession({ status: grant.exists() ? 'admin' : 'denied', user })
-        }
-      } catch {
-        if (check === currentCheck) setSession({ status: 'error', user })
+        },
+        () => {
+          clearTimeout(timeout)
+          setSession({ status: 'error', user })
+        },
+      )
+
+      stopGrant = () => {
+        clearTimeout(timeout)
+        unsubscribeGrant()
       }
     })
 
     return () => {
-      currentCheck += 1
+      stopGrant()
       unsubscribe()
     }
   }, [])

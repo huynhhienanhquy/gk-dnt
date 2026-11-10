@@ -80,7 +80,7 @@ Mobile đọc được `users` khi chưa đăng nhập. Firestore cấp quyền 
 ## Giai đoạn 3 · Web Admin
 
 - `src/firebase/client.js` kết nối Firebase Auth và Firestore từ cấu hình Vite.
-- `src/contexts/useAdminSession.js` theo dõi phiên Auth và kiểm tra UID với Firestore.
+- `src/contexts/useAdminSession.js` theo dõi phiên Auth và document cấp quyền. Khi document trong `admins` bị xóa và web đang kết nối, trang quản trị đóng ngay.
 - `src/pages/LoginPage.jsx` xử lý đăng nhập email và mật khẩu. `src/pages/UsersPage.jsx` hiển thị danh sách, mở form và xác nhận xóa.
 - `src/components/UserForm.jsx` dùng chung cho thêm và sửa. `src/services/users.js` kiểm tra bốn trường, ghi dữ liệu và đồng bộ danh sách qua `onSnapshot()`.
 - `src/index.css` định kiểu form, bảng và bố cục trên màn hình nhỏ.
