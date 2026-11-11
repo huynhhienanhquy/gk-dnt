@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { maxAvatarLength, saveUser, userFields, validateUser } from '../services/users.js'
+import { maxImageLength, saveProduct, productFields, validateProduct } from '../services/products.js'
 
-export default function UserForm({ user, onCancel, onSaved }) {
+export default function ProductForm({ product, onCancel, onSaved }) {
   const [values, setValues] = useState(() => Object.fromEntries(
-    userFields.map(({ name }) => [name, String(user?.[name] ?? '')]),
+    productFields.map(({ name }) => [name, String(product?.[name] ?? '')]),
   ))
   const [saving, setSaving] = useState(false)
-  const [image, setImage] = useState(user?.hinhanh ?? '')
+  const [image, setImage] = useState(product?.image ?? '')
   const [readingImage, setReadingImage] = useState(false)
   const [imageError, setImageError] = useState('')
   const [error, setError] = useState('')
@@ -32,7 +32,7 @@ export default function UserForm({ user, onCancel, onSaved }) {
         context.fillRect(0, 0, canvas.width, canvas.height)
         context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
         const avatar = canvas.toDataURL('image/jpeg', 0.8)
-        if (!avatar.startsWith('data:image/jpeg;base64,') || avatar.length > maxAvatarLength) {
+        if (!avatar.startsWith('data:image/jpeg;base64,') || avatar.length > maxImageLength) {
           throw new Error('Could not encode avatar')
         }
         setImage(avatar)
@@ -53,7 +53,7 @@ export default function UserForm({ user, onCancel, onSaved }) {
     setError('')
     let data
     try {
-      data = validateUser({ ...values, hinhanh: image })
+      data = validateProduct({ ...values, image })
     } catch (validationError) {
       setError(validationError.message)
       return
@@ -61,42 +61,43 @@ export default function UserForm({ user, onCancel, onSaved }) {
 
     setSaving(true)
     try {
-      await saveUser(user?.id, data)
-      onSaved(user ? 'Đã cập nhật người dùng.' : 'Đã thêm người dùng.')
+      await saveProduct(product?.id, data)
+      onSaved(product ? 'Đã cập nhật sản phẩm.' : 'Đã thêm sản phẩm.')
     } catch (saveError) {
       setError(saveError.code === 'permission-denied'
         ? 'Firestore từ chối lưu. Hãy kiểm tra quyền quản trị và dữ liệu.'
-        : 'Không lưu được người dùng. Hãy thử lại.')
+        : 'Không lưu được sản phẩm. Hãy thử lại.')
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <section className="panel editor" aria-labelledby="user-form-title">
-      <h2 id="user-form-title">{user ? 'Sửa người dùng' : 'Thêm người dùng'}</h2>
+    <section className="panel editor" aria-labelledby="product-form-title">
+      <h2 id="product-form-title">{product ? 'Sửa sản phẩm' : 'Thêm sản phẩm'}</h2>
       <form onSubmit={handleSubmit} noValidate>
         <fieldset disabled={saving}>
           <div className="form-grid">
-            {userFields.map(({ name, label, type, maxLength }) => (
+            {productFields.map(({ name, label, type, maxLength, min, step }) => (
               <label key={name}>
                 {label}
                 <input
                   type={type}
                   value={values[name]}
                   maxLength={maxLength}
+                  min={min}
+                  step={step}
                   required
                   onChange={(event) => setValues({ ...values, [name]: event.target.value })}
                 />
               </label>
             ))}
             <label>
-              Ảnh đại diện
+              Ảnh sản phẩm
               <input type="file" accept="image/*" disabled={readingImage} onChange={handleImageChange} />
-              {image && <img className="avatar" src={image} alt="Ảnh đại diện đã chọn" referrerPolicy="no-referrer" />}
+              {image && <img className="avatar" src={image} alt="Ảnh sản phẩm đã chọn" referrerPolicy="no-referrer" />}
             </label>
           </div>
-          <p className="muted">Dùng email hư cấu và mật khẩu demo.</p>
           {imageError && <p className="error" role="alert">{imageError}</p>}
           {error && <p className="error" role="alert">{error}</p>}
           <div className="actions">

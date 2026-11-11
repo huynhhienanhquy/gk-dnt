@@ -39,7 +39,7 @@ async function grantAdmin(uid) {
 }
 
 const permissionDenied = { code: 'permission-denied' }
-const [sample] = JSON.parse(await readFile(new URL('../../database/users-demo.json', import.meta.url), 'utf8'))
+const [sample] = JSON.parse(await readFile(new URL('../../database/products-demo.json', import.meta.url), 'utf8'))
 let unsubscribe
 let snapshots
 
@@ -64,13 +64,13 @@ try {
   assert.equal((await getDocFromServer(ownGrant)).exists(), false)
   await assert.rejects(getDocFromServer(doc(other.db, 'admins', user.uid)), permissionDenied)
   await assert.rejects(setDoc(ownGrant, { active: true }), permissionDenied)
-  await assert.rejects(addDoc(collection(viewer.db, 'users'), sample), permissionDenied)
-  await assert.rejects(addDoc(collection(other.db, 'users'), sample), permissionDenied)
+  await assert.rejects(addDoc(collection(viewer.db, 'products'), sample), permissionDenied)
+  await assert.rejects(addDoc(collection(other.db, 'products'), sample), permissionDenied)
   console.log('PASS Anonymous and non-admin clients cannot write or grant access')
 
   const events = new EventEmitter()
   snapshots = on(events, 'snapshot', { signal: AbortSignal.timeout(45_000) })
-  unsubscribe = onSnapshot(collection(viewer.db, 'users'), { includeMetadataChanges: true }, (snapshot) => {
+  unsubscribe = onSnapshot(collection(viewer.db, 'products'), { includeMetadataChanges: true }, (snapshot) => {
     if (!snapshot.metadata.fromCache) events.emit('snapshot', snapshot)
   }, (error) => events.emit('error', error))
 
@@ -84,37 +84,39 @@ try {
   }
 
   await waitForSnapshot(() => true)
-  const users = collection(admin.db, 'users')
-  const created = await addDoc(users, sample)
+  const products = collection(admin.db, 'products')
+  const created = await addDoc(products, sample)
   const visibleIn = (snapshot) => snapshot.docs.find((entry) => entry.id === created.id)
   const afterCreate = await waitForSnapshot((snapshot) => Boolean(visibleIn(snapshot)))
   assert.deepEqual(visibleIn(afterCreate).data(), sample)
   assert.deepEqual((await getDocFromServer(created)).data(), sample)
 
-  await assert.rejects(updateDoc(doc(other.db, 'users', created.id), { hoten: 'Blocked' }), permissionDenied)
-  await assert.rejects(deleteDoc(doc(viewer.db, 'users', created.id)), permissionDenied)
-  const missingImage = { email: sample.email, matkhau: sample.matkhau, hoten: sample.hoten }
-  await assert.rejects(addDoc(users, missingImage), permissionDenied)
-  for (const change of [{ phone: 'extra' }, { matkhau: '   ' }, { email: 'invalid' }, { hinhanh: 'http://example.com/image.png' }]) {
-    await assert.rejects(addDoc(users, { ...sample, ...change }), permissionDenied)
+  await assert.rejects(updateDoc(doc(other.db, 'products', created.id), { name: 'Blocked' }), permissionDenied)
+  await assert.rejects(deleteDoc(doc(viewer.db, 'products', created.id)), permissionDenied)
+  const missingImage = { name: sample.name, price: sample.price, soluong: sample.soluong }
+  await assert.rejects(addDoc(products, missingImage), permissionDenied)
+  for (const change of [{ extra: true }, { name: '   ' }, { price: '890000' }, { price: -1 }, { soluong: -1 }, { soluong: 1.5 }, { image: 'http://example.com/image.png' }]) {
+    await assert.rejects(addDoc(products, { ...sample, ...change }), permissionDenied)
   }
-  await assert.rejects(updateDoc(created, { hoten: '' }), permissionDenied)
+  await assert.rejects(updateDoc(created, { name: '' }), permissionDenied)
   console.log('PASS Rules require exactly four valid fields on create and update')
 
   const newName = 'Tên đã cập nhật'
-  await updateDoc(created, { hoten: newName })
-  await waitForSnapshot((snapshot) => visibleIn(snapshot)?.data().hoten === newName)
+  const changes = { name: newName, price: 19.5, soluong: 0 }
+  await updateDoc(created, changes)
+  const afterUpdate = await waitForSnapshot((snapshot) => visibleIn(snapshot)?.data().name === newName)
+  assert.deepEqual(visibleIn(afterUpdate).data(), { ...sample, ...changes })
   const jpegPrefix = 'data:image/jpeg;base64,/9j/'
   // Exercise the rule with a payload larger than the old HTTPS limit.
   const uploadedImage = jpegPrefix + Buffer.alloc(90_000, 42).toString('base64')
-  const uploadedUser = await addDoc(users, { ...sample, hinhanh: uploadedImage })
-  assert.equal((await getDocFromServer(uploadedUser)).data().hinhanh, uploadedImage)
-  await updateDoc(created, { hinhanh: uploadedImage })
-  await waitForSnapshot((snapshot) => visibleIn(snapshot)?.data().hinhanh === uploadedImage)
-  await assert.rejects(updateDoc(created, { hinhanh: jpegPrefix + 'a'.repeat(180_000) }), permissionDenied)
-  await assert.rejects(updateDoc(created, { hinhanh: 'data:image/svg+xml;base64,AAAA' }), permissionDenied)
-  await deleteDoc(uploadedUser)
-  console.log('PASS Uploaded avatars can be created and replaced within the JPEG size limit')
+  const uploadedProduct = await addDoc(products, { ...sample, image: uploadedImage })
+  assert.equal((await getDocFromServer(uploadedProduct)).data().image, uploadedImage)
+  await updateDoc(created, { image: uploadedImage })
+  await waitForSnapshot((snapshot) => visibleIn(snapshot)?.data().image === uploadedImage)
+  await assert.rejects(updateDoc(created, { image: jpegPrefix + 'a'.repeat(180_000) }), permissionDenied)
+  await assert.rejects(updateDoc(created, { image: 'data:image/svg+xml;base64,AAAA' }), permissionDenied)
+  await deleteDoc(uploadedProduct)
+  console.log('PASS Uploaded product images can be created and replaced within the JPEG size limit')
   await deleteDoc(created)
   await waitForSnapshot((snapshot) => !visibleIn(snapshot))
   await signOut(admin.auth)

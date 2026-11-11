@@ -4,7 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { auth, configError } from './firebase/client.js'
 import { useAdminSession } from './contexts/useAdminSession.js'
 import LoginPage from './pages/LoginPage.jsx'
-import UsersPage from './pages/UsersPage.jsx'
+import ProductsPage from './pages/ProductsPage.jsx'
 import Brand from './components/Brand.jsx'
 
 function StatusPanel({ title, description, children }) {
@@ -64,9 +64,10 @@ function AppRoutes() {
   const admin = status === 'admin'
   return (
     <Routes>
-      <Route path="/login" element={admin ? <Navigate to="/users" replace /> : <LoginPage />} />
-      <Route path="/users" element={admin ? <UsersPage email={user.email} logout={<LogoutButton />} /> : <Navigate to="/login" replace />} />
-      <Route path="*" element={<Navigate to={admin ? '/users' : '/login'} replace />} />
+      <Route path="/login" element={admin ? <Navigate to="/products" replace /> : <LoginPage />} />
+      <Route path="/products" element={admin ? <ProductsPage email={user.email} logout={<LogoutButton />} /> : <Navigate to="/login" replace />} />
+      <Route path="/users" element={<Navigate to="/products" replace />} />
+      <Route path="*" element={<Navigate to={admin ? '/products' : '/login'} replace />} />
     </Routes>
   )
 }

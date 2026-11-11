@@ -9,9 +9,9 @@ import UserAvatar from './components/UserAvatar.js'
 import { useAdminSession } from './contexts/useAdminSession.js'
 import { useLogin } from './contexts/useLogin.js'
 import { auth, configError } from './firebase/client.js'
-import { maxAvatarLength, removeUser, saveUser, subscribeToUsers, userFields, validateUser } from './services/users.js'
+import { maxImageLength, removeProduct, saveProduct, subscribeToProducts, productFields, validateProduct } from './services/products.js'
 
-const loadingList = { users: [], fromCache: false, status: 'loading' }
+const loadingList = { products: [], fromCache: false, status: 'loading' }
 
 function normalizeSearch(value) {
   return String(value ?? '').toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').replaceAll('đ', 'd')
@@ -32,7 +32,7 @@ function Action({ children, onPress, disabled = false, danger = false, primary =
 }
 
 function Brand() {
-  return <View style={styles.brand}><View style={styles.brandMark}><Text style={styles.brandLetter}>u·</Text></View><View><Text style={styles.brandName}>userly</Text><Text style={styles.brandTagline}>QUẢN LÝ NGƯỜI DÙNG</Text></View></View>
+  return <View style={styles.brand}><View style={styles.brandMark}><Text style={styles.brandLetter}>u·</Text></View><View><Text style={styles.brandName}>userly</Text><Text style={styles.brandTagline}>QUẢN LÝ SẢN PHẨM</Text></View></View>
 }
 
 function Notice({ title, description, retry }) {
@@ -72,8 +72,8 @@ function Login() {
       <View style={styles.loginHero}>
         <View style={styles.heroOrb} accessible={false} />
         <Text style={styles.heroEyebrow}>KHÔNG GIAN CỦA BẠN</Text>
-        <Text style={styles.heroTitle} accessibilityRole="header">Kết nối mọi người.{ '\n' }Quản lý dễ dàng.</Text>
-        <Text style={styles.heroDescription}>Một danh bạ gọn gàng, luôn bên bạn.</Text>
+        <Text style={styles.heroTitle} accessibilityRole="header">Quản lý sản phẩm</Text>
+        <Text style={styles.heroDescription}>Danh mục đồng bộ trên web và ứng dụng.</Text>
         <View style={styles.heroPill}><Text style={styles.heroPillText}>↔  Web & ứng dụng</Text></View>
       </View>
       <View style={styles.notice}>
@@ -112,11 +112,11 @@ function Logout() {
   )
 }
 
-function UserForm({ user, busy, error, fromCache, onSave, onCancel }) {
+function ProductForm({ product, busy, error, fromCache, onSave, onCancel }) {
   const [values, setValues] = useState(() => Object.fromEntries(
-    userFields.map(({ name }) => [name, String(user?.[name] ?? '')]),
+    productFields.map(({ name }) => [name, String(product?.[name] ?? '')]),
   ))
-  const [image, setImage] = useState(user?.hinhanh ?? '')
+  const [image, setImage] = useState(product?.image ?? '')
   const [readingImage, setReadingImage] = useState(false)
   const [imageError, setImageError] = useState('')
 
@@ -136,7 +136,7 @@ function UserForm({ user, busy, error, fromCache, onSave, onCancel }) {
         try {
           const { base64 } = await rendered.saveAsync({ base64: true, compress: 0.8, format: SaveFormat.JPEG })
           const avatar = `data:image/jpeg;base64,${base64}`
-          if (!base64 || avatar.length > maxAvatarLength) throw new Error('Could not encode avatar')
+          if (!base64 || avatar.length > maxImageLength) throw new Error('Could not encode avatar')
           setImage(avatar)
         } finally {
           rendered.release()
@@ -154,34 +154,32 @@ function UserForm({ user, busy, error, fromCache, onSave, onCancel }) {
   return (
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
       <Action onPress={onCancel} disabled={busy}>‹ Quay lại</Action>
-      <Text style={styles.title} accessibilityRole="header">{user ? 'Sửa người dùng' : 'Thêm người dùng'}</Text>
-      <Text style={styles.muted}>Một hồ sơ chỉn chu bắt đầu từ những thông tin nhỏ.</Text>
+      <Text style={styles.title} accessibilityRole="header">{product ? 'Sửa sản phẩm' : 'Thêm sản phẩm'}</Text>
       <View style={styles.notice}>
         <View style={styles.avatarPicker}>
-          <View style={styles.avatarRing}><UserAvatar key={image} name={values.hoten} uri={image} size={80} /></View>
-          <Text style={styles.fieldLabel}>Ảnh đại diện</Text>
-          <Action onPress={pickImage} disabled={busy || readingImage}>{readingImage ? 'Đang xử lý ảnh…' : image ? 'Đổi ảnh đại diện' : 'Chọn ảnh đại diện'}</Action>
+          <View style={styles.avatarRing}><UserAvatar key={image} name={values.name} uri={image} size={80} /></View>
+          <Text style={styles.fieldLabel}>Ảnh sản phẩm</Text>
+          <Action onPress={pickImage} disabled={busy || readingImage}>{readingImage ? 'Đang xử lý ảnh…' : image ? 'Đổi ảnh sản phẩm' : 'Chọn ảnh sản phẩm'}</Action>
         </View>
-        <Text style={styles.formSection}>THÔNG TIN CÁ NHÂN</Text>
-        {userFields.map(({ name, label, type, maxLength }) => (
+        <Text style={styles.formSection}>THÔNG TIN SẢN PHẨM</Text>
+        {productFields.map(({ name, label, type, maxLength }) => (
           <Field
             key={name}
             label={label}
             value={values[name]}
             onChangeText={(value) => setValues((current) => ({ ...current, [name]: value }))}
-            keyboardType={type === 'email' ? 'email-address' : 'default'}
-            autoCapitalize={name === 'hoten' ? 'words' : 'none'}
+            keyboardType={name === 'price' ? 'decimal-pad' : type === 'number' ? 'number-pad' : 'default'}
+            autoCapitalize={name === 'name' ? 'words' : 'none'}
             maxLength={maxLength}
             editable={!busy}
-            placeholder={name === 'hoten' ? 'Nhập họ và tên' : name === 'email' ? 'name@example.com' : 'Nhập mật khẩu demo'}
+            placeholder={name === 'name' ? 'Nhập tên sản phẩm' : '0'}
           />
         ))}
-        <Text style={styles.muted}>Dùng email hư cấu và mật khẩu demo.</Text>
         {fromCache && <Text style={styles.connection}>Đang kết nối lại Firestore.</Text>}
         {imageError ? <Text style={styles.error} accessibilityRole="alert">{imageError}</Text> : null}
         {error ? <Text style={styles.error} accessibilityRole="alert">{error}</Text> : null}
         <View style={styles.formActions}>
-          <Action primary onPress={() => onSave({ ...values, hinhanh: image })} disabled={busy || fromCache || readingImage || Boolean(imageError)}>{busy ? 'Đang lưu…' : 'Lưu thông tin  →'}</Action>
+          <Action primary onPress={() => onSave({ ...values, image })} disabled={busy || fromCache || readingImage || Boolean(imageError)}>{busy ? 'Đang lưu…' : 'Lưu thông tin  →'}</Action>
           <Action onPress={onCancel} disabled={busy}>Hủy</Action>
         </View>
       </View>
@@ -189,34 +187,23 @@ function UserForm({ user, busy, error, fromCache, onSave, onCancel }) {
   )
 }
 
-function UserDetail({ user, fromCache, busy, error, onEdit, onDelete, onBack }) {
+function ProductDetail({ product, fromCache, busy, error, onEdit, onDelete, onBack }) {
   const [confirm, setConfirm] = useState(false)
-  const [showDemoPassword, setShowDemoPassword] = useState(false)
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <Action onPress={onBack} disabled={busy}>‹ Danh sách</Action>
-      {user ? (
+      {product ? (
         <View style={styles.profile}>
-          <View style={styles.profileCover}><Text style={styles.heroEyebrow}>HỒ SƠ NGƯỜI DÙNG</Text></View>
-          <View style={styles.profileAvatar}><UserAvatar key={user.hinhanh} name={user.hoten} uri={user.hinhanh} size={96} /></View>
-          <Text accessibilityRole="header" style={styles.profileName}>{user.hoten || 'Chưa có họ tên'}</Text>
-          <Text selectable style={styles.profileEmail}>{user.email || 'Chưa có email'}</Text>
+          <View style={styles.profileCover}><Text style={styles.heroEyebrow}>CHI TIẾT SẢN PHẨM</Text></View>
+          <View style={styles.profileAvatar}><UserAvatar key={product.image} name={product.name} uri={product.image} size={96} /></View>
+          <Text accessibilityRole="header" style={styles.profileName}>{product.name || 'Chưa có tên'}</Text>
+          <Text style={styles.profileEmail}>Giá: {product.price.toLocaleString('vi-VN')}</Text>
+          <Text style={styles.profileEmail}>Số lượng: {product.soluong.toLocaleString('vi-VN')}</Text>
           <View style={styles.profileDivider} />
-          <Text style={styles.formSection}>THÔNG TIN TÀI KHOẢN</Text>
-          {user.matkhau ? (
-            <>
-              <Action onPress={() => setShowDemoPassword((visible) => !visible)}>
-                {showDemoPassword ? 'Ẩn mật khẩu demo' : 'Hiện mật khẩu demo'}
-              </Action>
-              {showDemoPassword && <Text selectable style={styles.profileEmail}>{user.matkhau}</Text>}
-            </>
-          ) : (
-            <Text style={styles.muted}>Chưa có mật khẩu demo</Text>
-          )}
           {confirm ? (
             <View style={styles.field}>
-              <Text style={styles.muted}>Xóa người dùng này khỏi danh sách?</Text>
+              <Text style={styles.muted}>Xóa sản phẩm này khỏi danh sách?</Text>
               <View style={styles.actions}>
                 <Action onPress={onDelete} disabled={busy || fromCache} danger>{busy ? 'Đang xóa…' : 'Xác nhận xóa'}</Action>
                 <Action onPress={() => setConfirm(false)} disabled={busy}>Hủy</Action>
@@ -224,21 +211,21 @@ function UserDetail({ user, fromCache, busy, error, onEdit, onDelete, onBack }) 
             </View>
           ) : (
             <View style={styles.actions}>
-              <Action primary onPress={onEdit} disabled={fromCache}>Chỉnh sửa hồ sơ</Action>
+              <Action primary onPress={onEdit} disabled={fromCache}>Sửa sản phẩm</Action>
               <Action onPress={() => setConfirm(true)} disabled={fromCache} danger>Xóa</Action>
             </View>
           )}
           {error ? <Text style={styles.error} accessibilityRole="alert">{error}</Text> : null}
         </View>
       ) : (
-        <Notice title="Người dùng không còn trong danh sách" description="Quay lại danh sách để xem dữ liệu hiện tại." />
+        <Notice title="Sản phẩm không còn trong danh sách" description="Quay lại danh sách để xem dữ liệu hiện tại." />
       )}
       {fromCache && <Text style={styles.connection} accessibilityLiveRegion="polite">Đang hiển thị dữ liệu tạm trong khi kết nối Firestore.</Text>}
     </ScrollView>
   )
 }
 
-function Directory({ email }) {
+function ProductCatalog({ email }) {
   const [list, setList] = useState(loadingList)
   const [attempt, setAttempt] = useState(0)
   const [selectedId, setSelectedId] = useState(null)
@@ -248,16 +235,14 @@ function Directory({ email }) {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [search, setSearch] = useState('')
-  const user = list.users.find((entry) => entry.id === selectedId)
+  const product = list.products.find((entry) => entry.id === selectedId)
   const query = normalizeSearch(search.trim())
-  const visibleUsers = query ? list.users.filter(({ hoten, email }) => (
-    normalizeSearch(hoten).includes(query) || normalizeSearch(email).includes(query)
-  )) : list.users
+  const visibleProducts = query ? list.products.filter(({ name }) => normalizeSearch(name).includes(query)) : list.products
 
   useEffect(() => {
-    return subscribeToUsers(
-      (users, fromCache) => setList({ users, fromCache, status: 'ready' }),
-      () => setList({ users: [], fromCache: false, status: 'error' }),
+    return subscribeToProducts(
+      (products, fromCache) => setList({ products, fromCache, status: 'ready' }),
+      () => setList({ products: [], fromCache: false, status: 'error' }),
     )
   }, [attempt])
 
@@ -282,7 +267,7 @@ function Directory({ email }) {
   function openEditor(entry = null) {
     setError('')
     setMessage('')
-    setEditor({ user: entry })
+    setEditor({ product: entry })
   }
 
   function closeDetail() {
@@ -301,7 +286,7 @@ function Directory({ email }) {
     let data
     if (values) {
       try {
-        data = validateUser(values)
+        data = validateProduct(values)
       } catch (failure) {
         setError(failure.message)
         return
@@ -311,13 +296,13 @@ function Directory({ email }) {
     setBusy(true)
     try {
       if (data) {
-        await saveUser(editor.user?.id, data)
-        setMessage(editor.user ? 'Đã cập nhật người dùng.' : 'Đã thêm người dùng.')
+        await saveProduct(editor.product?.id, data)
+        setMessage(editor.product ? 'Đã cập nhật sản phẩm.' : 'Đã thêm sản phẩm.')
         setEditor(null)
       } else {
-        setDeleting(user)
-        await removeUser(selectedId)
-        setMessage('Đã xóa người dùng.')
+        setDeleting(product)
+        await removeProduct(selectedId)
+        setMessage('Đã xóa sản phẩm.')
       }
       setSelectedId(null)
     } catch (failure) {
@@ -338,8 +323,8 @@ function Directory({ email }) {
 
       </View>
       {editor && list.status === 'ready' && (
-        <UserForm
-          user={editor.user}
+        <ProductForm
+          product={editor.product}
           busy={busy}
           error={error}
           fromCache={list.fromCache}
@@ -348,12 +333,12 @@ function Directory({ email }) {
         />
       )}
       {!editor && selectedId && list.status === 'ready' && (
-        <UserDetail
-          user={user ?? deleting}
+        <ProductDetail
+          product={product ?? deleting}
           fromCache={list.fromCache}
           busy={busy}
           error={error}
-          onEdit={() => openEditor(user)}
+          onEdit={() => openEditor(product)}
           onDelete={() => mutate()}
           onBack={closeDetail}
         />
@@ -369,37 +354,37 @@ function Directory({ email }) {
       )}
       {list.status === 'ready' && !editor && !selectedId && (
         <FlatList
-          data={visibleUsers}
+          data={visibleProducts}
           keyboardShouldPersistTaps="handled"
-          keyExtractor={(user) => user.id}
+          keyExtractor={(product) => product.id}
           contentContainerStyle={styles.listContent}
           ListHeaderComponent={(
             <View style={styles.listIntro}>
               <View style={styles.directoryHero}>
                 <View style={styles.heroOrb} accessible={false} />
-                <Text style={styles.heroEyebrow}>DANH BẠ CỦA BẠN</Text>
-                <Text style={styles.heroTitle} accessibilityRole="header">Mọi kết nối,{ '\n' }cùng một nơi.</Text>
+                <Text style={styles.heroEyebrow}>DANH MỤC</Text>
+                <Text style={styles.heroTitle} accessibilityRole="header">Sản phẩm</Text>
                 <View style={styles.heroBottom}>
-                  <View><Text style={styles.heroCount}>{list.users.length}</Text><Text style={styles.heroDescription}>người dùng trong danh bạ</Text></View>
+                  <View><Text style={styles.heroCount}>{list.products.length}</Text><Text style={styles.heroDescription}>sản phẩm trong danh mục</Text></View>
                   <View style={styles.heroSymbol} accessible={false}><Text style={styles.heroSymbolText}>↗</Text></View>
                 </View>
               </View>
-              <Action primary onPress={() => openEditor()} disabled={list.fromCache}>＋ Thêm người dùng</Action>
-              <View style={styles.directorySummary}><Text style={styles.sectionTitle}>Người dùng</Text><Text style={styles.countBadge}>{list.users.length} hồ sơ</Text></View>
+              <Action primary onPress={() => openEditor()} disabled={list.fromCache}>＋ Thêm sản phẩm</Action>
+              <View style={styles.directorySummary}><Text style={styles.sectionTitle}>Sản phẩm</Text><Text style={styles.countBadge}>{list.products.length} sản phẩm</Text></View>
               <View style={styles.searchBox}>
                 <Text style={styles.searchGlyph} accessible={false}>⌕</Text>
-                <TextInput accessibilityLabel="Tìm người dùng theo họ tên hoặc email" autoCapitalize="none" autoCorrect={false} placeholder="Tìm tên hoặc email…" placeholderTextColor="#8a9b95" returnKeyType="search" style={styles.searchInput} value={search} onChangeText={setSearch} />
+                <TextInput accessibilityLabel="Tìm theo tên sản phẩm" autoCapitalize="none" autoCorrect={false} placeholder="Tìm tên sản phẩm…" placeholderTextColor="#8a9b95" returnKeyType="search" style={styles.searchInput} value={search} onChangeText={setSearch} />
                 {search.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Xóa tìm kiếm" onPress={() => setSearch('')} style={styles.clearSearch}><Text style={styles.revealText}>×</Text></Pressable>}
               </View>
-              {query ? <Text style={styles.muted} accessibilityLiveRegion="polite">{visibleUsers.length} kết quả tìm kiếm</Text> : null}
+              {query ? <Text style={styles.muted} accessibilityLiveRegion="polite">{visibleProducts.length} kết quả tìm kiếm</Text> : null}
               {message ? <Text style={styles.success} accessibilityLiveRegion="polite">{message}</Text> : null}
               {list.fromCache && <Text style={styles.connection} accessibilityLiveRegion="polite">Đang kết nối lại Firestore. Dữ liệu có thể chưa cập nhật.</Text>}
             </View>
           )}
-          ListEmptyComponent={list.users.length === 0 && list.fromCache ? (
+          ListEmptyComponent={list.products.length === 0 && list.fromCache ? (
             <Notice title="Chưa có dữ liệu tạm" description="Danh sách sẽ cập nhật khi kết nối được với Firestore." />
           ) : (
-            <Notice title={list.users.length === 0 ? 'Danh sách trống' : 'Không tìm thấy người dùng phù hợp'} />
+            <Notice title={list.products.length === 0 ? 'Danh sách trống' : 'Không tìm thấy sản phẩm phù hợp'} />
           )}
           renderItem={({ item }) => (
             <Pressable
@@ -410,10 +395,10 @@ function Directory({ email }) {
               }}
               style={({ pressed }) => [styles.card, pressed && styles.pressed]}
             >
-              <UserAvatar key={item.hinhanh} name={item.hoten} uri={item.hinhanh} size={48} />
+              <UserAvatar key={item.image} name={item.name} uri={item.image} size={48} />
               <View style={styles.cardBody}>
-                <Text style={styles.cardName} numberOfLines={2}>{item.hoten || 'Chưa có họ tên'}</Text>
-                <Text style={styles.cardEmail} numberOfLines={1}>{item.email || 'Chưa có email'}</Text>
+                <Text style={styles.cardName} numberOfLines={2}>{item.name || 'Chưa có tên'}</Text>
+                <Text style={styles.cardEmail} numberOfLines={1}>{item.price.toLocaleString('vi-VN')} · SL: {item.soluong.toLocaleString('vi-VN')}</Text>
               </View>
               <View style={styles.chevronCircle}><Text style={styles.chevron} accessible={false}>›</Text></View>
             </Pressable>
@@ -428,7 +413,7 @@ function AdminApp() {
   const { status, user } = useAdminSession()
   if (configError) return <View style={styles.content}><Notice title="Cấu hình Firebase" description={configError} /></View>
   if (status === 'signed-out') return <Login />
-  if (status === 'admin') return <Directory key={user.uid} email={user.email} />
+  if (status === 'admin') return <ProductCatalog key={user.uid} email={user.email} />
   if (status === 'checking') {
     return (
       <View style={styles.loading}>

@@ -40,7 +40,7 @@ export default function LoginPage() {
     <main className="center-screen login-screen">
       <aside className="login-story">
         <Brand />
-        <div><p className="eyebrow">MỘT KHÔNG GIAN. MỌI KẾT NỐI.</p><h2>Quản lý dễ dàng.<br />Kết nối liền mạch.</h2><p>Thông tin người dùng luôn trong tầm tay, trên web và ứng dụng của bạn.</p></div>
+        <div><p className="eyebrow">DANH MỤC SẢN PHẨM</p><h2>Quản lý dễ dàng.<br />Đồng bộ trên mọi thiết bị.</h2><p>Thông tin sản phẩm luôn trong tầm tay, trên web và ứng dụng của bạn.</p></div>
         <div className="story-card"><span className="story-icon" aria-hidden="true">↔</span><div><strong>Đồng bộ trên mọi thiết bị</strong><p>Một danh sách chung, cập nhật theo thời gian thực.</p></div></div>
         <p className="story-footer">userly · Không gian quản trị của bạn</p>
       </aside>
@@ -48,7 +48,7 @@ export default function LoginPage() {
         <Brand />
         <p className="eyebrow login-eyebrow">CHÀO MỪNG TRỞ LẠI</p>
         <h1 id="login-title">Đăng nhập</h1>
-        <p className="muted">Tiếp tục quản lý và kết nối với người dùng của bạn.</p>
+        <p className="muted">Đăng nhập để quản lý danh mục sản phẩm.</p>
         <form onSubmit={handleSubmit} noValidate>
           <fieldset disabled={loading}>
             <label>Email quản trị<input type="email" placeholder="admin@example.com" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" required /></label>

@@ -7,27 +7,25 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
-    function validUser(data) {
-      let fields = ['email', 'matkhau', 'hoten', 'hinhanh'];
+    function validProduct(data) {
+      let fields = ['name', 'price', 'soluong', 'image'];
       return data.keys().hasAll(fields) && data.keys().hasOnly(fields)
-        && data.email is string && data.email.size() <= 254
-        && data.email.matches('[^\\s@]+@[^\\s@]+\\.[^\\s@]+')
-        && data.matkhau is string && data.matkhau.size() <= 100
-        && data.matkhau.matches('.*\\S.*')
-        && data.hoten is string && data.hoten.size() <= 100
-        && data.hoten.matches('.*\\S.*')
-        && data.hinhanh is string
-        && ((data.hinhanh.size() <= 2048 && data.hinhanh.matches('https://[^\\s/@?#]+([/?#][^\\s]*)?'))
-          || (data.hinhanh.size() <= 180000 && data.hinhanh.matches('data:image/jpeg;base64,/9j/[A-Za-z0-9+/]+={0,2}')));
+        && data.name is string && data.name.size() <= 100
+        && data.name.matches('.*\\S.*')
+        && (data.price is int || data.price is float) && data.price >= 0 && data.price <= 9007199254740991
+        && data.soluong is int && data.soluong >= 0 && data.soluong <= 9007199254740991
+        && data.image is string
+        && ((data.image.size() <= 2048 && data.image.matches('https://[^\\s/@?#]+([/?#][^\\s]*)?'))
+          || (data.image.size() <= 180000 && data.image.matches('data:image/jpeg;base64,/9j/[A-Za-z0-9+/]+={0,2}')));
     }
 
     match /admins/{uid} {
       allow get: if request.auth != null && request.auth.uid == uid;
     }
 
-    match /users/{id} {
+    match /products/{id} {
       allow read: if true;
-      allow create, update: if isAdmin() && validUser(request.resource.data);
+      allow create, update: if isAdmin() && validProduct(request.resource.data);
       allow delete: if isAdmin();
     }
   }

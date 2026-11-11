@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Bàn phím cơ",
+    "price": 890000,
+    "soluong": 12,
+    "image": "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=384"
+  },
+  {
+    "name": "Tai nghe không dây",
+    "price": 650000,
+    "soluong": 8,
+    "image": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=384"
+  }
+]
