@@ -5,8 +5,20 @@ export const userFields = [
   { name: 'hoten', label: 'Họ và tên', type: 'text', maxLength: 100 },
   { name: 'email', label: 'Email', type: 'email', maxLength: 254 },
   { name: 'matkhau', label: 'Mật khẩu demo', type: 'text', maxLength: 100 },
-  { name: 'hinhanh', label: 'URL hình ảnh', type: 'url', maxLength: 2048 },
 ]
+
+export const maxAvatarLength = 180_000
+
+function isValidImage(value) {
+  if (value.startsWith('data:image/jpeg;base64,')) {
+    return value.length <= maxAvatarLength && /^data:image\/jpeg;base64,\/9j\/[A-Za-z0-9+/]+={0,2}$/.test(value)
+  }
+  try {
+    return value.length <= 2048 && /^https:\/\/[^\s/@?#]+([/?#][^\s]*)?$/.test(value) && Boolean(new URL(value).hostname)
+  } catch {
+    return false
+  }
+}
 
 export function validateUser(values) {
   const data = Object.fromEntries(userFields.map(({ name }) => [name, values[name].trim()]))
@@ -17,10 +29,10 @@ export function validateUser(values) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
     throw new Error('Email không đúng định dạng.')
   }
-  if (!/^https:\/\/[^\s/@?#]+([/?#][^\s]*)?$/.test(data.hinhanh) || !URL.canParse(data.hinhanh)) {
-    throw new Error('Hãy nhập URL ảnh hợp lệ bắt đầu bằng https://.')
-  }
-  return data
+  const image = String(values.hinhanh ?? '').trim()
+  if (!image) throw new Error('Vui lòng chọn ảnh từ thiết bị.')
+  if (!isValidImage(image)) throw new Error('Ảnh không hợp lệ. Hãy chọn lại ảnh từ thiết bị.')
+  return { ...data, hinhanh: image }
 }
 
 export function subscribeToUsers(onUsers, onError) {

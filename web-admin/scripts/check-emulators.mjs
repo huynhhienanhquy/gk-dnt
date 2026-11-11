@@ -104,6 +104,17 @@ try {
   const newName = 'Tên đã cập nhật'
   await updateDoc(created, { hoten: newName })
   await waitForSnapshot((snapshot) => visibleIn(snapshot)?.data().hoten === newName)
+  const jpegPrefix = 'data:image/jpeg;base64,/9j/'
+  // Exercise the rule with a payload larger than the old HTTPS limit.
+  const uploadedImage = jpegPrefix + Buffer.alloc(90_000, 42).toString('base64')
+  const uploadedUser = await addDoc(users, { ...sample, hinhanh: uploadedImage })
+  assert.equal((await getDocFromServer(uploadedUser)).data().hinhanh, uploadedImage)
+  await updateDoc(created, { hinhanh: uploadedImage })
+  await waitForSnapshot((snapshot) => visibleIn(snapshot)?.data().hinhanh === uploadedImage)
+  await assert.rejects(updateDoc(created, { hinhanh: jpegPrefix + 'a'.repeat(180_000) }), permissionDenied)
+  await assert.rejects(updateDoc(created, { hinhanh: 'data:image/svg+xml;base64,AAAA' }), permissionDenied)
+  await deleteDoc(uploadedUser)
+  console.log('PASS Uploaded avatars can be created and replaced within the JPEG size limit')
   await deleteDoc(created)
   await waitForSnapshot((snapshot) => !visibleIn(snapshot))
   await signOut(admin.auth)

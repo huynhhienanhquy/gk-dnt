@@ -5,11 +5,13 @@ import { auth, configError } from './firebase/client.js'
 import { useAdminSession } from './contexts/useAdminSession.js'
 import LoginPage from './pages/LoginPage.jsx'
 import UsersPage from './pages/UsersPage.jsx'
+import Brand from './components/Brand.jsx'
 
 function StatusPanel({ title, description, children }) {
   return (
     <main className="center-screen">
       <section className="panel login-panel">
+        <Brand />
         <h1>{title}</h1>
         {description && <p className="muted">{description}</p>}
         {children}

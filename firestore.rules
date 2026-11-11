@@ -16,8 +16,9 @@ service cloud.firestore {
         && data.matkhau.matches('.*\\S.*')
         && data.hoten is string && data.hoten.size() <= 100
         && data.hoten.matches('.*\\S.*')
-        && data.hinhanh is string && data.hinhanh.size() <= 2048
-        && data.hinhanh.matches('https://[^\\s/@?#]+([/?#][^\\s]*)?');
+        && data.hinhanh is string
+        && ((data.hinhanh.size() <= 2048 && data.hinhanh.matches('https://[^\\s/@?#]+([/?#][^\\s]*)?'))
+          || (data.hinhanh.size() <= 180000 && data.hinhanh.matches('data:image/jpeg;base64,/9j/[A-Za-z0-9+/]+={0,2}')));
     }
 
     match /admins/{uid} {

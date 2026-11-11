@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../firebase/client.js'
+import Brand from '../components/Brand.jsx'
 
 const messages = {
   'auth/invalid-email': 'Email không đúng định dạng.',
@@ -36,19 +37,27 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="center-screen">
+    <main className="center-screen login-screen">
+      <aside className="login-story">
+        <Brand />
+        <div><p className="eyebrow">MỘT KHÔNG GIAN. MỌI KẾT NỐI.</p><h2>Quản lý dễ dàng.<br />Kết nối liền mạch.</h2><p>Thông tin người dùng luôn trong tầm tay, trên web và ứng dụng của bạn.</p></div>
+        <div className="story-card"><span className="story-icon" aria-hidden="true">↔</span><div><strong>Đồng bộ trên mọi thiết bị</strong><p>Một danh sách chung, cập nhật theo thời gian thực.</p></div></div>
+        <p className="story-footer">userly · Không gian quản trị của bạn</p>
+      </aside>
       <section className="panel login-panel" aria-labelledby="login-title">
-        <p className="eyebrow">WEB ADMIN</p>
-        <h1 id="login-title">Quản lý người dùng</h1>
-        <p className="muted">Đăng nhập bằng tài khoản quản trị Firebase.</p>
+        <Brand />
+        <p className="eyebrow login-eyebrow">CHÀO MỪNG TRỞ LẠI</p>
+        <h1 id="login-title">Đăng nhập</h1>
+        <p className="muted">Tiếp tục quản lý và kết nối với người dùng của bạn.</p>
         <form onSubmit={handleSubmit} noValidate>
           <fieldset disabled={loading}>
-            <label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" required /></label>
-            <label>Mật khẩu<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required /></label>
+            <label>Email quản trị<input type="email" placeholder="admin@example.com" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" required /></label>
+            <label>Mật khẩu<input type="password" placeholder="Nhập mật khẩu của bạn" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required /></label>
             {error && <p role="alert" className="error">{error}</p>}
             <button className="primary full" type="submit">{loading ? 'Đang đăng nhập…' : 'Đăng nhập'}</button>
           </fieldset>
         </form>
+        <p className="login-footnote">Dành cho tài khoản đã được cấp quyền quản trị.</p>
       </section>
     </main>
   )

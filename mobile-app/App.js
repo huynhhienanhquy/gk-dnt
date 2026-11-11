@@ -1,28 +1,38 @@
 import { useEffect, useState } from 'react'
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator'
+import { launchImageLibraryAsync } from 'expo-image-picker'
 import { StatusBar } from 'expo-status-bar'
 import { signOut } from 'firebase/auth'
-import { ActivityIndicator, BackHandler, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, BackHandler, FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import UserAvatar from './components/UserAvatar.js'
 import { useAdminSession } from './contexts/useAdminSession.js'
 import { useLogin } from './contexts/useLogin.js'
 import { auth, configError } from './firebase/client.js'
-import { removeUser, saveUser, subscribeToUsers, userFields, validateUser } from './services/users.js'
+import { maxAvatarLength, removeUser, saveUser, subscribeToUsers, userFields, validateUser } from './services/users.js'
 
 const loadingList = { users: [], fromCache: false, status: 'loading' }
 
-function Action({ children, onPress, disabled = false, danger = false }) {
+function normalizeSearch(value) {
+  return String(value ?? '').toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').replaceAll('đ', 'd')
+}
+
+function Action({ children, onPress, disabled = false, danger = false, primary = false }) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.button, pressed && styles.pressed, danger && styles.dangerButton, disabled && styles.disabled]}
+      style={({ pressed }) => [styles.button, primary && styles.primaryButton, pressed && (primary ? styles.primaryPressed : styles.pressed), danger && styles.dangerButton, disabled && styles.disabled]}
     >
-      <Text style={[styles.buttonText, danger && styles.error]}>{children}</Text>
+      <Text style={[styles.buttonText, primary && styles.primaryText, danger && styles.dangerText]}>{children}</Text>
     </Pressable>
   )
+}
+
+function Brand() {
+  return <View style={styles.brand}><View style={styles.brandMark}><Text style={styles.brandLetter}>u·</Text></View><View><Text style={styles.brandName}>userly</Text><Text style={styles.brandTagline}>QUẢN LÝ NGƯỜI DÙNG</Text></View></View>
 }
 
 function Notice({ title, description, retry }) {
@@ -35,11 +45,20 @@ function Notice({ title, description, retry }) {
   )
 }
 
-function Field({ label, ...props }) {
+function Field({ label, secureTextEntry, ...props }) {
+  const [focused, setFocused] = useState(false)
+  const [revealed, setRevealed] = useState(false)
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <TextInput style={styles.input} accessibilityLabel={label} autoCapitalize="none" {...props} />
+      <View style={[styles.inputFrame, focused && styles.inputFocused]}>
+        <TextInput
+          placeholderTextColor="#8a9b95" style={styles.fieldInput} accessibilityLabel={label}
+          autoCapitalize="none" secureTextEntry={secureTextEntry && !revealed}
+          onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} {...props}
+        />
+        {secureTextEntry && <Pressable accessibilityRole="button" accessibilityLabel={revealed ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} onPress={() => setRevealed((value) => !value)} style={styles.revealButton}><Text style={styles.revealText}>{revealed ? 'Ẩn' : 'Hiện'}</Text></Pressable>}
+      </View>
     </View>
   )
 }
@@ -49,14 +68,22 @@ function Login() {
 
   return (
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.login}>
-      <View style={styles.notice}>
-        <Text style={styles.title} accessibilityRole="header">Quản lý người dùng</Text>
-        <Text style={styles.muted}>Đăng nhập bằng tài khoản quản trị Firebase.</Text>
-        <Field label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoComplete="username" editable={!busy} />
-        <Field label="Mật khẩu" value={password} onChangeText={setPassword} secureTextEntry autoComplete="current-password" editable={!busy} onSubmitEditing={login} />
-        {error ? <Text style={styles.error} accessibilityRole="alert">{error}</Text> : null}
-        <Action onPress={login} disabled={busy}>{busy ? 'Đang đăng nhập…' : 'Đăng nhập'}</Action>
+      <Brand />
+      <View style={styles.loginHero}>
+        <View style={styles.heroOrb} accessible={false} />
+        <Text style={styles.heroEyebrow}>KHÔNG GIAN CỦA BẠN</Text>
+        <Text style={styles.heroTitle} accessibilityRole="header">Kết nối mọi người.{ '\n' }Quản lý dễ dàng.</Text>
+        <Text style={styles.heroDescription}>Một danh bạ gọn gàng, luôn bên bạn.</Text>
+        <View style={styles.heroPill}><Text style={styles.heroPillText}>↔  Web & ứng dụng</Text></View>
       </View>
+      <View style={styles.notice}>
+        <View style={styles.field}><Text style={styles.sectionTitle} accessibilityRole="header">Chào mừng trở lại</Text><Text style={styles.muted}>Đăng nhập để tiếp tục vào không gian của bạn.</Text></View>
+        <Field label="Email quản trị" placeholder="admin@example.com" value={email} onChangeText={setEmail} keyboardType="email-address" autoComplete="username" editable={!busy} />
+        <Field label="Mật khẩu" placeholder="Nhập mật khẩu của bạn" value={password} onChangeText={setPassword} secureTextEntry autoComplete="current-password" editable={!busy} onSubmitEditing={login} />
+        {error ? <Text style={styles.error} accessibilityRole="alert">{error}</Text> : null}
+        <Action primary onPress={login} disabled={busy}>{busy ? 'Đang đăng nhập…' : 'Đăng nhập  →'}</Action>
+      </View>
+      <Text style={styles.loginFootnote}>Dành cho tài khoản đã được cấp quyền quản trị.</Text>
     </ScrollView>
   )
 }
@@ -89,28 +116,72 @@ function UserForm({ user, busy, error, fromCache, onSave, onCancel }) {
   const [values, setValues] = useState(() => Object.fromEntries(
     userFields.map(({ name }) => [name, String(user?.[name] ?? '')]),
   ))
+  const [image, setImage] = useState(user?.hinhanh ?? '')
+  const [readingImage, setReadingImage] = useState(false)
+  const [imageError, setImageError] = useState('')
+
+  async function pickImage() {
+    setReadingImage(true)
+    try {
+      const result = await launchImageLibraryAsync({ mediaTypes: ['images'] })
+      if (result.canceled) return
+      setImageError('')
+      const { uri, width, height } = result.assets[0]
+      const context = ImageManipulator.manipulate(uri)
+      try {
+        if (Math.max(width, height) > 384) {
+          context.resize(width >= height ? { width: 384 } : { height: 384 })
+        }
+        const rendered = await context.renderAsync()
+        try {
+          const { base64 } = await rendered.saveAsync({ base64: true, compress: 0.8, format: SaveFormat.JPEG })
+          const avatar = `data:image/jpeg;base64,${base64}`
+          if (!base64 || avatar.length > maxAvatarLength) throw new Error('Could not encode avatar')
+          setImage(avatar)
+        } finally {
+          rendered.release()
+        }
+      } finally {
+        context.release()
+      }
+    } catch {
+      setImageError('Không xử lý được ảnh. Hãy chọn ảnh khác.')
+    } finally {
+      setReadingImage(false)
+    }
+  }
 
   return (
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+      <Action onPress={onCancel} disabled={busy}>‹ Quay lại</Action>
       <Text style={styles.title} accessibilityRole="header">{user ? 'Sửa người dùng' : 'Thêm người dùng'}</Text>
+      <Text style={styles.muted}>Một hồ sơ chỉn chu bắt đầu từ những thông tin nhỏ.</Text>
       <View style={styles.notice}>
+        <View style={styles.avatarPicker}>
+          <View style={styles.avatarRing}><UserAvatar key={image} name={values.hoten} uri={image} size={80} /></View>
+          <Text style={styles.fieldLabel}>Ảnh đại diện</Text>
+          <Action onPress={pickImage} disabled={busy || readingImage}>{readingImage ? 'Đang xử lý ảnh…' : image ? 'Đổi ảnh đại diện' : 'Chọn ảnh đại diện'}</Action>
+        </View>
+        <Text style={styles.formSection}>THÔNG TIN CÁ NHÂN</Text>
         {userFields.map(({ name, label, type, maxLength }) => (
           <Field
             key={name}
             label={label}
             value={values[name]}
             onChangeText={(value) => setValues((current) => ({ ...current, [name]: value }))}
-            keyboardType={type === 'email' ? 'email-address' : type === 'url' ? 'url' : 'default'}
+            keyboardType={type === 'email' ? 'email-address' : 'default'}
             autoCapitalize={name === 'hoten' ? 'words' : 'none'}
             maxLength={maxLength}
             editable={!busy}
+            placeholder={name === 'hoten' ? 'Nhập họ và tên' : name === 'email' ? 'name@example.com' : 'Nhập mật khẩu demo'}
           />
         ))}
-        <Text style={styles.muted}>Dùng email hư cấu, mật khẩu demo và URL ảnh HTTPS.</Text>
+        <Text style={styles.muted}>Dùng email hư cấu và mật khẩu demo.</Text>
         {fromCache && <Text style={styles.connection}>Đang kết nối lại Firestore.</Text>}
+        {imageError ? <Text style={styles.error} accessibilityRole="alert">{imageError}</Text> : null}
         {error ? <Text style={styles.error} accessibilityRole="alert">{error}</Text> : null}
-        <View style={styles.actions}>
-          <Action onPress={() => onSave(values)} disabled={busy || fromCache}>{busy ? 'Đang lưu…' : 'Lưu'}</Action>
+        <View style={styles.formActions}>
+          <Action primary onPress={() => onSave({ ...values, hinhanh: image })} disabled={busy || fromCache || readingImage || Boolean(imageError)}>{busy ? 'Đang lưu…' : 'Lưu thông tin  →'}</Action>
           <Action onPress={onCancel} disabled={busy}>Hủy</Action>
         </View>
       </View>
@@ -127,9 +198,12 @@ function UserDetail({ user, fromCache, busy, error, onEdit, onDelete, onBack }) 
       <Action onPress={onBack} disabled={busy}>‹ Danh sách</Action>
       {user ? (
         <View style={styles.profile}>
-          <UserAvatar key={user.hinhanh} name={user.hoten} uri={user.hinhanh} size={112} />
+          <View style={styles.profileCover}><Text style={styles.heroEyebrow}>HỒ SƠ NGƯỜI DÙNG</Text></View>
+          <View style={styles.profileAvatar}><UserAvatar key={user.hinhanh} name={user.hoten} uri={user.hinhanh} size={96} /></View>
           <Text accessibilityRole="header" style={styles.profileName}>{user.hoten || 'Chưa có họ tên'}</Text>
           <Text selectable style={styles.profileEmail}>{user.email || 'Chưa có email'}</Text>
+          <View style={styles.profileDivider} />
+          <Text style={styles.formSection}>THÔNG TIN TÀI KHOẢN</Text>
           {user.matkhau ? (
             <>
               <Action onPress={() => setShowDemoPassword((visible) => !visible)}>
@@ -150,7 +224,7 @@ function UserDetail({ user, fromCache, busy, error, onEdit, onDelete, onBack }) 
             </View>
           ) : (
             <View style={styles.actions}>
-              <Action onPress={onEdit} disabled={fromCache}>Sửa</Action>
+              <Action primary onPress={onEdit} disabled={fromCache}>Chỉnh sửa hồ sơ</Action>
               <Action onPress={() => setConfirm(true)} disabled={fromCache} danger>Xóa</Action>
             </View>
           )}
@@ -173,7 +247,12 @@ function Directory({ email }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [search, setSearch] = useState('')
   const user = list.users.find((entry) => entry.id === selectedId)
+  const query = normalizeSearch(search.trim())
+  const visibleUsers = query ? list.users.filter(({ hoten, email }) => (
+    normalizeSearch(hoten).includes(query) || normalizeSearch(email).includes(query)
+  )) : list.users
 
   useEffect(() => {
     return subscribeToUsers(
@@ -254,14 +333,9 @@ function Directory({ email }) {
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
-        <View style={styles.account}>
-          <Text style={[styles.muted, styles.cardBody]} numberOfLines={1}>{email}</Text>
-          <Logout />
-        </View>
-        <Text style={styles.title} accessibilityRole="header">Người dùng</Text>
-        {!editor && !selectedId && (
-          <Action onPress={() => openEditor()} disabled={list.status !== 'ready' || list.fromCache}>Thêm người dùng</Action>
-        )}
+        <View style={styles.account}><Brand /><Logout /></View>
+        <Text style={styles.accountEmail} numberOfLines={1}>{email}</Text>
+
       </View>
       {editor && list.status === 'ready' && (
         <UserForm
@@ -286,7 +360,7 @@ function Directory({ email }) {
       )}
       {list.status === 'loading' && (
         <View style={styles.loading}>
-          <ActivityIndicator color="#244cc4" />
+          <ActivityIndicator color="#087f6b" />
           <Text style={styles.muted} accessibilityLiveRegion="polite">Đang tải danh sách…</Text>
         </View>
       )}
@@ -295,18 +369,38 @@ function Directory({ email }) {
       )}
       {list.status === 'ready' && !editor && !selectedId && (
         <FlatList
-          data={list.users}
+          data={visibleUsers}
+          keyboardShouldPersistTaps="handled"
           keyExtractor={(user) => user.id}
-          contentContainerStyle={styles.content}
-          ListHeaderComponent={(message || list.fromCache) ? (
-            <View style={styles.field}>
+          contentContainerStyle={styles.listContent}
+          ListHeaderComponent={(
+            <View style={styles.listIntro}>
+              <View style={styles.directoryHero}>
+                <View style={styles.heroOrb} accessible={false} />
+                <Text style={styles.heroEyebrow}>DANH BẠ CỦA BẠN</Text>
+                <Text style={styles.heroTitle} accessibilityRole="header">Mọi kết nối,{ '\n' }cùng một nơi.</Text>
+                <View style={styles.heroBottom}>
+                  <View><Text style={styles.heroCount}>{list.users.length}</Text><Text style={styles.heroDescription}>người dùng trong danh bạ</Text></View>
+                  <View style={styles.heroSymbol} accessible={false}><Text style={styles.heroSymbolText}>↗</Text></View>
+                </View>
+              </View>
+              <Action primary onPress={() => openEditor()} disabled={list.fromCache}>＋ Thêm người dùng</Action>
+              <View style={styles.directorySummary}><Text style={styles.sectionTitle}>Người dùng</Text><Text style={styles.countBadge}>{list.users.length} hồ sơ</Text></View>
+              <View style={styles.searchBox}>
+                <Text style={styles.searchGlyph} accessible={false}>⌕</Text>
+                <TextInput accessibilityLabel="Tìm người dùng theo họ tên hoặc email" autoCapitalize="none" autoCorrect={false} placeholder="Tìm tên hoặc email…" placeholderTextColor="#8a9b95" returnKeyType="search" style={styles.searchInput} value={search} onChangeText={setSearch} />
+                {search.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Xóa tìm kiếm" onPress={() => setSearch('')} style={styles.clearSearch}><Text style={styles.revealText}>×</Text></Pressable>}
+              </View>
+              {query ? <Text style={styles.muted} accessibilityLiveRegion="polite">{visibleUsers.length} kết quả tìm kiếm</Text> : null}
               {message ? <Text style={styles.success} accessibilityLiveRegion="polite">{message}</Text> : null}
               {list.fromCache && <Text style={styles.connection} accessibilityLiveRegion="polite">Đang kết nối lại Firestore. Dữ liệu có thể chưa cập nhật.</Text>}
             </View>
-          ) : null}
-          ListEmptyComponent={list.fromCache
-            ? <Notice title="Chưa có dữ liệu tạm" description="Danh sách sẽ cập nhật khi kết nối được với Firestore." />
-            : <Notice title="Danh sách trống" />}
+          )}
+          ListEmptyComponent={list.users.length === 0 && list.fromCache ? (
+            <Notice title="Chưa có dữ liệu tạm" description="Danh sách sẽ cập nhật khi kết nối được với Firestore." />
+          ) : (
+            <Notice title={list.users.length === 0 ? 'Danh sách trống' : 'Không tìm thấy người dùng phù hợp'} />
+          )}
           renderItem={({ item }) => (
             <Pressable
               accessibilityRole="button"
@@ -318,10 +412,10 @@ function Directory({ email }) {
             >
               <UserAvatar key={item.hinhanh} name={item.hoten} uri={item.hinhanh} size={48} />
               <View style={styles.cardBody}>
-                <Text style={styles.cardName}>{item.hoten || 'Chưa có họ tên'}</Text>
-                <Text style={styles.muted}>{item.email || 'Chưa có email'}</Text>
+                <Text style={styles.cardName} numberOfLines={2}>{item.hoten || 'Chưa có họ tên'}</Text>
+                <Text style={styles.cardEmail} numberOfLines={1}>{item.email || 'Chưa có email'}</Text>
               </View>
-              <Text style={styles.chevron} accessible={false}>›</Text>
+              <View style={styles.chevronCircle}><Text style={styles.chevron} accessible={false}>›</Text></View>
             </Pressable>
           )}
         />
@@ -338,7 +432,7 @@ function AdminApp() {
   if (status === 'checking') {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator color="#244cc4" />
+        <ActivityIndicator color="#087f6b" />
         <Text style={styles.muted} accessibilityLiveRegion="polite">Đang kiểm tra phiên đăng nhập…</Text>
       </View>
     )
@@ -359,43 +453,89 @@ export default function App() {
     <SafeAreaProvider>
       <SafeAreaView style={styles.screen}>
         <StatusBar style="dark" />
-        <AdminApp />
+        <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}><AdminApp /></KeyboardAvoidingView>
       </SafeAreaView>
     </SafeAreaProvider>
   )
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#f3f6fc' },
-  header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 8, gap: 5 },
-  content: { paddingHorizontal: 20, paddingVertical: 16, gap: 12 },
-  login: { flexGrow: 1, justifyContent: 'center', padding: 20 },
-  account: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 8 },
+  sectionTitle: { color: '#18332f', fontSize: 21, fontWeight: '700', letterSpacing: -0.6 },
+  loginHero: { padding: 26, gap: 16, backgroundColor: '#075d50', borderRadius: 28, overflow: 'hidden' },
+  directoryHero: { padding: 26, gap: 16, backgroundColor: '#075d50', borderRadius: 26, overflow: 'hidden' },
+  heroOrb: { position: 'absolute', width: 220, height: 220, borderRadius: 110, borderWidth: 36, borderColor: '#ffffff08', top: -65, right: -85 },
+  heroEyebrow: { color: '#b4e0cf', fontSize: 10, fontWeight: '700', letterSpacing: 1.6 },
+  heroTitle: { color: '#fff', fontSize: 29, fontWeight: '700', letterSpacing: -0.9, lineHeight: 38 },
+  heroDescription: { color: '#c1e1d6', fontSize: 13, lineHeight: 21 },
+  heroPill: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#ffffff12', borderRadius: 20, borderWidth: 1, borderColor: '#ffffff20' },
+  heroPillText: { color: '#e1f3ec', fontSize: 11, fontWeight: '600' },
+  heroBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, borderTopWidth: 1, borderTopColor: '#ffffff20', paddingTop: 16 },
+  heroCount: { color: '#fff', fontSize: 34, fontWeight: '700', letterSpacing: -1 },
+  heroSymbol: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#ffffff12', alignItems: 'center', justifyContent: 'center' },
+  heroSymbolText: { fontSize: 26, color: '#b4e0cf' },
+  listContent: { paddingHorizontal: 22, paddingTop: 20, paddingBottom: 36, gap: 12, width: '100%', maxWidth: 640, alignSelf: 'center' },
+  listIntro: { gap: 16, paddingBottom: 4 },
+  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 54, paddingLeft: 16, backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: '#e1e9e6' },
+  searchGlyph: { color: '#647873', fontSize: 26 },
+  searchInput: { flex: 1, minWidth: 0, color: '#18332f', fontSize: 15, paddingVertical: 14, paddingRight: 12 },
+  clearSearch: { minWidth: 44, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
+  cardEmail: { color: '#647873', fontSize: 13, lineHeight: 20 },
+  chevronCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#f0f6f3', alignItems: 'center', justifyContent: 'center' },
+  inputFrame: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, borderWidth: 1, borderColor: '#e1e9e6', backgroundColor: '#f8fbf9' },
+  inputFocused: { borderColor: '#087f6b', backgroundColor: '#fff' },
+  fieldInput: { flex: 1, minWidth: 0, minHeight: 54, paddingHorizontal: 16, paddingVertical: 14, color: '#18332f', fontSize: 16 },
+  revealButton: { minHeight: 48, minWidth: 52, paddingHorizontal: 12, justifyContent: 'center', alignItems: 'center' },
+  revealText: { color: '#087f6b', fontSize: 13, fontWeight: '600' },
+  avatarPicker: { alignItems: 'center', gap: 12, paddingVertical: 10 },
+  avatarRing: { padding: 6, backgroundColor: '#f0f7f3', borderWidth: 1, borderColor: '#daebe1', borderRadius: 50 },
+  formSection: { color: '#647873', fontSize: 10, fontWeight: '700', letterSpacing: 1.4 },
+  formActions: { gap: 12 },
+  profileCover: { alignSelf: 'stretch', marginHorizontal: -22, height: 112, backgroundColor: '#075d50', padding: 24 },
+  profileAvatar: { marginTop: -54, padding: 6, borderRadius: 58, backgroundColor: '#fff' },
+  profileDivider: { height: 1, backgroundColor: '#e6eeea', alignSelf: 'stretch', marginVertical: 4 },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  brandMark: { width: 40, height: 40, backgroundColor: '#087f6b', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  brandLetter: { color: '#fff', fontSize: 31, fontWeight: '800', marginTop: -4, letterSpacing: -3 },
+  brandName: { color: '#18332f', fontSize: 25, fontWeight: '700', letterSpacing: -1 },
+  brandTagline: { color: '#647873', fontSize: 8, fontWeight: '700', letterSpacing: 1.2 },
+  loginFootnote: { color: '#647873', fontSize: 12, textAlign: 'center', lineHeight: 19 },
+  accountEmail: { color: '#647873', fontSize: 11, paddingLeft: 50 },
+  directorySummary: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginTop: 12, marginBottom: 4 },
+  countBadge: { color: '#087f6b', backgroundColor: '#e8f5ef', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, fontSize: 11, fontWeight: '600' },
+  primaryButton: { backgroundColor: '#087f6b', alignSelf: 'stretch', alignItems: 'center' },
+  primaryText: { color: '#fff' },
+  primaryPressed: { backgroundColor: '#066653' },
+  dangerText: { color: '#a13643' },
+  screen: { flex: 1, backgroundColor: '#f5f8f7' },
+  header: { paddingHorizontal: 22, paddingTop: 12, paddingBottom: 12, gap: 2, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e6eeea' },
+  content: { paddingHorizontal: 22, paddingTop: 20, paddingBottom: 40, gap: 16, width: '100%', maxWidth: 640, alignSelf: 'center' },
+  login: { flexGrow: 1, paddingHorizontal: 22, paddingTop: 24, paddingBottom: 32, gap: 24, width: '100%', maxWidth: 520, alignSelf: 'center' },
+  account: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, paddingBottom: 4 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  field: { gap: 5 },
-  fieldLabel: { color: '#17243c', fontWeight: '700' },
-  input: { minHeight: 46, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: '#aebdd2', color: '#17243c', backgroundColor: '#fff', fontSize: 16 },
-  error: { color: '#a12836' },
-  success: { color: '#176443', fontWeight: '700' },
-  title: { color: '#17243c', fontSize: 32, fontWeight: '800' },
-  muted: { color: '#52637c', fontSize: 15, lineHeight: 21 },
+  field: { gap: 8 },
+  fieldLabel: { color: '#18332f', fontWeight: '700' },
+  error: { color: '#a13643', backgroundColor: '#fff0f1', padding: 12, borderRadius: 10, lineHeight: 21 },
+  success: { color: '#087451', backgroundColor: '#e8f5ef', padding: 12, borderRadius: 10, fontWeight: '600' },
+  title: { color: '#18332f', fontSize: 32, fontWeight: '700', letterSpacing: -1 },
+  muted: { color: '#647873', fontSize: 15, lineHeight: 21 },
   loading: { alignItems: 'center', gap: 12, paddingTop: 36 },
   connection: { color: '#69410a', backgroundColor: '#fff1cf', padding: 12, borderRadius: 12, lineHeight: 20 },
   card: {
-    flexDirection: 'row', alignItems: 'center', gap: 13, minHeight: 78,
-    backgroundColor: '#fff', borderColor: '#d6e0ef', borderWidth: 1, borderRadius: 16, padding: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 90,
+    backgroundColor: '#fff', borderColor: '#e6eeea', borderWidth: 1, borderRadius: 20, padding: 16,
+    shadowColor: '#18332f', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.035, shadowRadius: 10, elevation: 1,
   },
-  cardBody: { flex: 1, gap: 3 },
-  cardName: { color: '#17243c', fontWeight: '700', fontSize: 16 },
-  chevron: { color: '#244cc4', fontSize: 25 },
-  notice: { backgroundColor: '#fff', borderColor: '#d6e0ef', borderWidth: 1, borderRadius: 16, padding: 18, gap: 10 },
-  noticeTitle: { color: '#17243c', fontWeight: '700', fontSize: 18 },
-  button: { alignSelf: 'flex-start', backgroundColor: '#e7edff', borderRadius: 10, minHeight: 44, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 8 },
-  buttonText: { color: '#244cc4', fontWeight: '700', fontSize: 15 },
-  pressed: { backgroundColor: '#dce7ff' },
+  cardBody: { flex: 1, minWidth: 0, gap: 5 },
+  cardName: { color: '#18332f', fontWeight: '700', fontSize: 16 },
+  chevron: { color: '#087f6b', fontSize: 25 },
+  notice: { backgroundColor: '#fff', borderColor: '#e1e9e6', borderWidth: 1, borderRadius: 24, padding: 22, gap: 22 },
+  noticeTitle: { color: '#18332f', fontWeight: '700', fontSize: 18 },
+  button: { alignSelf: 'flex-start', backgroundColor: '#e8f5ef', borderRadius: 14, minHeight: 50, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 8 },
+  buttonText: { color: '#087f6b', fontWeight: '700', fontSize: 15 },
+  pressed: { backgroundColor: '#d4ebdf' },
   dangerButton: { backgroundColor: '#fde8eb' },
   disabled: { opacity: 0.55 },
-  profile: { alignItems: 'center', backgroundColor: '#fff', borderColor: '#d6e0ef', borderWidth: 1, borderRadius: 18, padding: 24, gap: 10 },
-  profileName: { color: '#17243c', fontSize: 23, fontWeight: '800', textAlign: 'center' },
-  profileEmail: { color: '#52637c', fontSize: 16, textAlign: 'center' },
+  profile: { alignItems: 'center', backgroundColor: '#fff', borderColor: '#e1e9e6', borderWidth: 1, borderRadius: 24, paddingHorizontal: 22, paddingBottom: 28, gap: 16, overflow: 'hidden' },
+  profileName: { color: '#18332f', fontSize: 23, fontWeight: '800', textAlign: 'center' },
+  profileEmail: { color: '#647873', fontSize: 16, textAlign: 'center' },
 })

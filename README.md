@@ -93,7 +93,7 @@ Sau khi cấu hình Firebase, khởi động lại Vite bằng `npm.cmd run dev`
 1. Truy cập trực tiếp `/users` khi đã đăng xuất. Trình duyệt phải chuyển về `/login`.
 2. Bấm **Đăng nhập** khi bỏ trống form, rồi thử email quản trị với mật khẩu sai. Cả hai lần phải có thông báo phù hợp.
 3. Đăng nhập đúng. Kiểm tra danh sách và ảnh mẫu. Nhấn tải lại trang để xác nhận phiên vẫn còn. Nếu tài khoản vào được Auth nhưng thiếu UID trong `admins`, ứng dụng phải báo thiếu quyền.
-4. Chọn **Thêm người dùng** và thử lưu với trường trống hoặc email sai. Sau đó dùng dữ liệu hư cấu và URL HTTPS hợp lệ. Kiểm tra hàng mới tự hiện trên web và document trong Console có đúng bốn trường.
+4. Chọn **Thêm người dùng** và thử lưu với trường trống hoặc email sai. Sau đó dùng dữ liệu hư cấu, chọn ảnh từ máy và kiểm tra ảnh xem trước. Khi lưu, kiểm tra hàng mới tự hiện trên web và document trong Console có đúng bốn trường.
 5. Chọn **Sửa**, đổi họ tên rồi lưu. Hàng tương ứng phải tự cập nhật.
 6. Chọn **Xóa** và hủy xác nhận để kiểm tra hàng còn nguyên. Thử lại, lần này xác nhận xóa. Hàng phải biến mất mà không cần tải lại trang.
 7. Chọn **Đăng xuất**. Kiểm tra ứng dụng quay về trang đăng nhập.
@@ -108,7 +108,7 @@ Chạy `npm.cmd run lint` để kiểm tra mã và `npm.cmd run build` để t�
 - `mobile-app/App.js` mở chi tiết theo ID của document. Trong chi tiết, chọn **Sửa** hoặc **Xóa**. Danh sách có nút **Thêm người dùng**.
 - `mobile-app/components/UserAvatar.js` hiển thị ảnh tròn và thay bằng chữ cái đầu nếu URL ảnh lỗi.
 
-Nhập URL HTTPS công khai cho trường `hinhanh` để ảnh hiển thị trên cả trình duyệt và điện thoại.
+Chọn ảnh đại diện từ thiết bị khi thêm người dùng. Khi sửa, có thể giữ ảnh hiện tại hoặc chọn ảnh khác. Web và mobile thu nhỏ ảnh mới xuống tối đa 384 px ở cạnh dài nhất và lưu ảnh JPEG trong trường `hinhanh` của Firestore. Ảnh HTTPS từ dữ liệu mẫu vẫn hiển thị. Cập nhật Firestore Rules theo `firestore.rules` trước khi lưu ảnh từ thiết bị.
 
 1. Điền `mobile-app/.env.local` theo Giai đoạn 2, rồi khởi động lại Expo bằng `npm.cmd start -- --go --lan` trong thư mục `mobile-app` khi máy tính và điện thoại đang dùng cùng mạng Wi-Fi.
 2. Dùng Expo Go quét mã QR. Thử mật khẩu sai, sau đó đăng nhập bằng tài khoản admin của web. Đóng và mở lại app để kiểm tra phiên được giữ.
