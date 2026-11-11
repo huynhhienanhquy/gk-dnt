@@ -1,10 +1,10 @@
 # Quản lý người dùng đa nền tảng
 
-Bài giữa kỳ môn Lập trình đa nền tảng. Dự án gồm Web Admin dùng React/Vite và ứng dụng Android dùng React Native/Expo. Hai ứng dụng sẽ kết nối cùng một dự án Firebase.
+Bài giữa kỳ môn Lập trình đa nền tảng. Dự án gồm Web Admin dùng React/Vite và ứng dụng mobile dùng React Native/Expo. Hai ứng dụng sẽ kết nối cùng một dự án Firebase.
 
 ## Giai đoạn 1 · Chuẩn bị môi trường
 
-Trên Windows, mở PowerShell tại thư mục gốc của dự án và chạy `node --version`, `npm.cmd --version` và `code --version`. Máy phát triển dùng Node.js 22.14.0, npm 10.9.2 và VS Code. Mobile dùng Expo SDK 57. Cài bản Expo Go tương ứng trên Android từ [trang tải của Expo](https://expo.dev/go?sdkVersion=57&platform=android&device=true).
+Trên Windows, mở PowerShell tại thư mục gốc của dự án và chạy `node --version`, `npm.cmd --version` và `code --version`. Máy phát triển dùng Node.js 22.14.0, npm 10.9.2 và VS Code. Mobile dùng Expo SDK 58. Cài bản Expo Go tương ứng từ [trang tải của Expo](https://expo.dev/go).
 
 Hai ứng dụng dùng Firebase JavaScript SDK 12.19.0 để tương thích với Node.js 22. Khi chuyển mã nguồn sang máy khác, chạy `npm.cmd ci` trong từng thư mục ứng dụng. Lệnh này cài đúng phiên bản được lưu trong `package-lock.json`.
 
@@ -24,21 +24,24 @@ Mở địa chỉ `Local` mà Vite in trong terminal, thường là `http://loca
 
 ### 2. Chạy thử Mobile App
 
-Mở một terminal khác tại thư mục gốc. Cho máy tính và điện thoại dùng cùng mạng Wi-Fi.
+Kết nối máy tính và điện thoại vào cùng một mạng Wi-Fi có sẵn. Mở một terminal khác tại thư mục gốc và chạy Expo Go qua mạng nội bộ (LAN).
 
 ```powershell
 Set-Location .\mobile-app
-npm.cmd start
+npm.cmd start -- --go --lan
 ```
 
-Mở Expo Go trên Android, chọn **Scan QR code** và quét mã trong terminal. Phiên bản hiện tại hiển thị **Cấu hình Firebase** nếu thiếu `.env.local`, hoặc mở danh bạ nếu đã điền cấu hình.
+- Trên Android, mở Expo Go, chọn **Scan QR code** và quét mã trong terminal.
+- Trên iPhone, đăng nhập cùng một tài khoản Expo trong Expo Go và trên máy tính bằng `npx.cmd expo login`. Bật **Cài đặt → Quyền riêng tư & Bảo mật → Mạng cục bộ → Expo Go** nếu ứng dụng đã yêu cầu quyền, rồi dùng Camera quét mã QR trong terminal. [Yêu cầu đăng nhập của Expo Go trên iOS](https://docs.expo.dev/troubleshooting/expo-go-sign-in-required/) · [Quyền mạng cục bộ trên iPhone](https://support.apple.com/102229)
+
+Ứng dụng hiển thị **Cấu hình Firebase** nếu thiếu `.env.local`. Khi đã cấu hình, đăng nhập bằng tài khoản quản trị như trên web.
 
 - `index.js` đăng ký thành phần gốc với Expo.
-- `App.js` chứa màn hình danh sách, chi tiết và xử lý nút quay lại.
+- `App.js` chứa màn hình đăng nhập, danh sách, chi tiết và form thêm, sửa người dùng.
 - `app.json` cấu hình tên, biểu tượng và tùy chọn của ứng dụng Expo.
 - `package.json` khai báo Expo SDK, React Native và các lệnh chạy.
 
-Nếu thiết bị báo sai phiên bản, chọn lại bản Expo Go cho SDK 57. Nếu đúng phiên bản nhưng điện thoại không kết nối qua Wi-Fi, dừng server bằng `Ctrl+C` rồi chạy `npm.cmd start -- --tunnel` và quét mã mới. [Hướng dẫn kết nối của Expo](https://docs.expo.dev/get-started/start-developing/)
+Nếu thiết bị báo sai phiên bản, kiểm tra Expo Go có hỗ trợ SDK 58. Nếu báo `The request timed out`, mở `http://<IP-máy-tính>:<cổng-Metro>/status` bằng trình duyệt trên điện thoại. Dùng IP và cổng từ địa chỉ `exp://` trong terminal. Nếu không thấy `packager-status:running`, chạy `ipconfig` trên máy tính và so sánh IP trong terminal với địa chỉ IPv4 của bộ điều hợp Wi-Fi. Nếu IP trùng, kiểm tra Windows Firewall có cho phép Node.js trên mạng riêng và mạng Wi-Fi có cho phép các thiết bị kết nối với nhau. [Hướng dẫn kết nối của Expo](https://docs.expo.dev/get-started/start-developing/)
 
 Xác nhận trang web và ứng dụng Android mở được. Ghi lại lỗi nếu một thiết bị chưa chạy được.
 
@@ -64,7 +67,7 @@ Xác nhận trang web và ứng dụng Android mở được. Ghi lại lỗi n�
 1. Vào **Authentication → Sign-in method** và bật **Email/Password**.
 2. Trong **Authentication → Users**, chọn **Add user**, điền email quản trị và tự đặt mật khẩu. Sao chép **User UID** của tài khoản vừa tạo.
 
-**Kiểm tra:** Tài khoản quản trị xuất hiện trong **Authentication → Users** và có UID. Mật khẩu này chỉ nhập trong Firebase Console và form đăng nhập Web Admin. [Quản lý tài khoản Firebase Authentication](https://firebase.google.com/docs/auth/web/manage-users)
+**Kiểm tra:** Tài khoản quản trị xuất hiện trong **Authentication → Users** và có UID. Dùng mật khẩu này để đăng nhập trên Web Admin và Mobile App. [Quản lý tài khoản Firebase Authentication](https://firebase.google.com/docs/auth/web/manage-users)
 
 ### 3. Tạo Firestore và áp dụng Rules
 
@@ -75,7 +78,7 @@ Xác nhận trang web và ứng dụng Android mở được. Ghi lại lỗi n�
 
 **Kiểm tra:** Trong **Rules Playground**, mô phỏng `get` một document `/users/<ID>` với **Authenticated** tắt và xác nhận **Allowed**. Mô phỏng `delete` cùng đường dẫn khi chưa đăng nhập và khi dùng UID bất kỳ ngoài `admins`, cả hai phải **Denied**. Thay UID bằng UID quản trị, kết quả `delete` phải **Allowed**. Playground chỉ mô phỏng nên dữ liệu mẫu vẫn còn. [Kiểm tra Firestore Rules](https://firebase.google.com/docs/firestore/security/get-started)
 
-Mobile đọc được `users` khi chưa đăng nhập. Firestore cấp quyền theo toàn bộ document, vì vậy người gọi Firebase trực tiếp có thể đọc cả `matkhau` dù giao diện mobile chỉ hiển thị ảnh, họ tên và email. Chỉ dùng email hư cấu và chuỗi minh họa như `demo-001`. Rules chỉ cấp quyền ghi cho UID có document trong `admins` và kiểm tra đủ bốn trường khi tạo hoặc sửa. [Quyền đọc theo document](https://firebase.google.com/docs/firestore/security/rules-fields#allowing_read_access_only_for_specific_fields)
+Giao diện quản trị trên cả hai ứng dụng yêu cầu đăng nhập. Firestore Rules của dữ liệu demo vẫn cho phép đọc toàn bộ document `users` qua API, kể cả trường `matkhau`. Chỉ dùng email hư cấu và chuỗi minh họa như `demo-001`. Rules chỉ cấp quyền ghi cho UID có document trong `admins` và kiểm tra đủ bốn trường khi tạo hoặc sửa. [Quyền đọc theo document](https://firebase.google.com/docs/firestore/security/rules-fields#allowing_read_access_only_for_specific_fields)
 
 ## Giai đoạn 3 · Web Admin
 
@@ -99,17 +102,19 @@ Chạy `npm.cmd run lint` để kiểm tra mã và `npm.cmd run build` để t�
 
 ## Giai đoạn 4 · Mobile App
 
-- `mobile-app/firebase/client.js` kết nối Firestore bằng cấu hình Expo. Dùng cùng Project ID với web.
-- `mobile-app/services/users.js` đăng ký `onSnapshot()`, chuyển ảnh, họ tên và email sang giao diện, rồi sắp xếp theo họ tên.
-- `mobile-app/App.js` mở chi tiết theo ID của document. Khi document thay đổi trong Firestore, chi tiết đang mở dùng dữ liệu mới. Nếu document bị xóa, màn hình hướng dẫn quay lại.
+- `mobile-app/firebase/client.js` kết nối Firebase Auth và Firestore bằng cấu hình Expo. Dùng cùng Project ID với web.
+- `mobile-app/contexts/useAdminSession.js` theo dõi phiên đăng nhập và quyền từ collection `admins`. Phiên Firebase được lưu trên thiết bị để dùng lại khi mở app.
+- `mobile-app/services/users.js` kiểm tra bốn trường, ghi dữ liệu và cập nhật danh sách theo thời gian thực qua `onSnapshot()`.
+- `mobile-app/App.js` mở chi tiết theo ID của document. Trong chi tiết, chọn **Sửa** hoặc **Xóa**. Danh sách có nút **Thêm người dùng**.
 - `mobile-app/components/UserAvatar.js` hiển thị ảnh tròn và thay bằng chữ cái đầu nếu URL ảnh lỗi.
 
-URL trong `hinhanh` phải truy cập được từ cả trình duyệt lẫn điện thoại, ví dụ URL HTTPS trong dữ liệu mẫu. Đường dẫn `file://` hoặc `content://` chỉ trỏ tới tệp trên thiết bị đã chọn ảnh. Bài này nhập URL ảnh từ Web Admin, còn mobile hiển thị ảnh.
+Nhập URL HTTPS công khai cho trường `hinhanh` để ảnh hiển thị trên cả trình duyệt và điện thoại.
 
-1. Điền `mobile-app/.env.local` theo Giai đoạn 2, rồi khởi động lại Expo bằng `npm.cmd start` trong thư mục `mobile-app`.
-2. Dùng Expo Go trên Android quét mã QR. Kiểm tra danh sách có ảnh tròn, họ tên và email. Bấm một hàng để xem ảnh lớn và thử nút **Danh sách** hoặc nút quay lại của Android.
-3. Mở đồng thời Web Admin và Mobile App. Trên web, thêm một người dùng rồi kiểm tra hàng mới xuất hiện trên mobile. Mở chi tiết của hàng đó và sửa họ tên trên web. Chi tiết phải đổi theo. Xóa người dùng thử nghiệm trên web và xác nhận người đó biến mất khỏi danh sách mobile.
-4. Giữ ứng dụng đang mở, ngắt mạng trên điện thoại rồi kết nối lại. Khi Firestore chuyển sang dữ liệu tạm, mobile hiện thông báo kết nối. Sau khi mạng phục hồi, danh sách tiếp tục cập nhật.
+1. Điền `mobile-app/.env.local` theo Giai đoạn 2, rồi khởi động lại Expo bằng `npm.cmd start -- --go --lan` trong thư mục `mobile-app` khi máy tính và điện thoại đang dùng cùng mạng Wi-Fi.
+2. Dùng Expo Go quét mã QR. Thử mật khẩu sai, sau đó đăng nhập bằng tài khoản admin của web. Đóng và mở lại app để kiểm tra phiên được giữ.
+3. Trên mobile, thêm một người dùng demo. Mở chi tiết, sửa họ tên, rồi thử hủy và xác nhận xóa. Kiểm tra các thay đổi đồng bộ với web ở mỗi bước.
+4. Chọn **Đăng xuất** và xác nhận app quay về màn hình đăng nhập. Thử đăng nhập bằng tài khoản Firebase thiếu UID trong `admins` để kiểm tra thông báo thiếu quyền.
+5. Khi đã đăng nhập, ngắt mạng rồi kết nối lại. Kiểm tra thông báo khi Firestore hiển thị dữ liệu tạm và danh sách cập nhật khi kết nối lại.
 
 Chạy `npx.cmd expo export --platform android` để kiểm tra đóng gói JavaScript Android. Kiểm tra Expo Go trên điện thoại để xác nhận ảnh và đồng bộ trong điều kiện chạy thật.
 

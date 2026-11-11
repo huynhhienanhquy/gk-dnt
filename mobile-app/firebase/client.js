@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app'
 import { getFirestore } from 'firebase/firestore'
+import { createAuth } from './createAuth'
 
 const config = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -8,16 +9,19 @@ const config = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 }
 
+let auth
 let db
 let configError = ''
 try {
   if (Object.values(config).some((value) => !value?.trim())) {
     configError = 'Điền bốn biến Firebase trong mobile-app/.env.local rồi khởi động lại Expo.'
   } else {
-    db = getFirestore(initializeApp(config))
+    const app = initializeApp(config)
+    auth = createAuth(app)
+    db = getFirestore(app)
   }
 } catch {
   configError = 'Cấu hình Firebase không hợp lệ. Hãy kiểm tra lại thông tin Web App.'
 }
 
-export { configError, db }
+export { auth, configError, db }
